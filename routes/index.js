@@ -40,6 +40,7 @@ router.get('/showRanking', (req, res, next) => {
     })
 });
 //显示文章列表
+
 router.get('/showArticle', (req, res, next) => {
     article.findAll((err, getArticles) => {
         res.json({ status: 0, message: '获取主页', data: getArticles })
