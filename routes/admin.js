@@ -57,6 +57,30 @@ router.post('/movieAdd', (req, res, next) => {
 		}
 	});
 });
+// 获取电影详情
+router.post('/movieDetail',(req,res,next)=>{
+	if(!req.body.movieId){
+		res.json({status:1,message:'电影id传递失败'})
+	}
+	if(!req.body.username){
+		res.json({status:1,message:'用户名为空'})
+	}
+	if(!req.body.token){
+		res.json({status:1,message:'登录出错'})
+	}
+	if(!req.body.id){
+		res.json({status:1,message:'用户传递错误'})
+	}
+	user.findByUsername(req.body.username,(err,findUser)=>{
+		if(findUser[0].userAdmin && !findUser[0].userStop){
+			movie.findById(req.body.movieId,(err,movieDetail)=>{
+				res.json({status:0,message:'获取成功',data:movieDetail})
+			})
+		}else{
+			res.json({error:1,message:'用户没有权限或者已经停用'})
+		}
+	})
+})
 //删除电影
 router.post('/movieDel',(req,res,next)=>{
 	if(!req.body.movieId){
@@ -97,7 +121,7 @@ router.post('/movieUpdate',(req,res,next)=>{
 	}
 	//这里前台打包一个电影对象全部发送至后台直接储存
 	var saveDate = req.body.movieInfo;
-	user.findByUserName(req.body.username,(err,findUser)=>{
+	user.findByUsername(req.body.username,(err,findUser)=>{
 		if(findUser[0].userAdmin && !findUser[0].userStop){
 			//更新操作
 			movie.update({_id:req.body.movieId},saveDate,(err,updateMovie)=>{
@@ -109,17 +133,22 @@ router.post('/movieUpdate',(req,res,next)=>{
 	})
 })
 //获取所有电影
-router.get('/movie',(req,res,next)=>{
-	movie.findAll((err,allMovie)=>{
-		res.json({status:0,message:'获取成功',data:allMovie})
+router.post('/movie',(req,res,next)=>{
+	movie.findByPagination(req.body.pageNum,req.body.pageSize,(err,allMovie)=>{
+		movie.findAll((err,movies)=>{
+		res.json({status:0,message:'获取成功',data:allMovie,totalPage:movies.length})
+		})
 	})
 })
 //显示后台的所有评论
-router.get('/commentsList',(req,res,next)=>{
-	comment.findAll((err,allComment)=>{
-		res.json({status:0,message:'获取成功',data:allComment})
+router.post('/commentsList',(req,res,next)=>{
+	comment.findByPagination(req.body.pageNum,req.body.pageSize,(err,allComment)=>{
+		comment.findAll((err,comments)=>{
+			res.json({status:0,message:'获取成功',data:allComment,totalPage:comments.length})
+		})
 	})
 })
+//审核用户评论
 router.post('/checkComment',(req,res,next)=>{
 	if(!req.body.commentId){
 		res.json({status:1,message:'评论id传递失败'})
@@ -133,7 +162,7 @@ router.post('/checkComment',(req,res,next)=>{
 	if(!req.body.id){
 		res.json({status:1,message:'用户传递错误'})
 	}
-	user.findByUserName(req.body.username,(err,findUser)=>{
+	user.findByUsername(req.body.username,(err,findUser)=>{
 		if(findUser[0].userAdmin && !findUser[0].userStop){
 			//更新操作
 			comment.update({_id:req.body.commentId},{check:true},(err,updatComment)=>{
@@ -158,7 +187,7 @@ router.post('/delComment',(req,res,next)=>{
 	if(!req.body.id){
 		res.json({status:1,message:'用户传递错误'})
 	}
-	user.findByUserName(req.body.username,(err,findUser)=>{
+	user.findByUsername(req.body.username,(err,findUser)=>{
 		if(findUser[0].userAdmin && !findUser[0].userStop){
 			//删除操作
 			comment.remove({_id:req.body.commentId},(err,delComment)=>{
@@ -184,10 +213,10 @@ router.post('/stopUser',(req,res,next)=>{
 		res.json({status:1,message:'用户传递错误'})
 	}
 	// 查找用户是否存在
-	user.findByUserName(req.body.username,(err,findUser)=>{
+	user.findByUsername(req.body.username,(err,findUser)=>{
 		if(findUser[0].userAdmin && !findUser[0].userStop){
-			user.update({_id:req.body.userId},{userStop:true},(err,updateUser)=>{
-				res.json({status:0,message:'封停成功',data:updateUser})
+			user.update({_id:req.body.userId},{userStop:req.body.userStop},(err,updateUser)=>{
+				res.json({status:0,message:'操作成功',data:updateUser})
 			})
 		}else{
 			res.json({error:1,message:'用户没有获得权限或者已经停用'})
@@ -235,8 +264,10 @@ router.post('/showUser',(req,res,next)=>{
 	}
 	user.findByUsername(req.body.username,(err,findUser)=>{
 		if(findUser[0].userAdmin && !findUser[0].userStop){
-			user.findAll((err,allUser)=>{
-				res.json({status:1,message:'获取成功',data:allUser})
+			user.findUserByPagination(req.body.pageNum,req.body.pageSize,(err,userList)=>{
+				user.findAll((err,allUser)=>{
+					res.json({status:0,message:'获取成功',data:userList,totalPage:allUser.length})
+				})
 			})
 		}else{
 			res.json({error:1,message:'用户没有获得权限或者已经停用'})
@@ -355,6 +386,31 @@ router.post('/addRecommend',(req,res,next)=>{
 				}else{
 					res.json({status:0,message:'保存成功'})
 				}
+			})
+		}else{
+			res.json({error:1,message:'用户没有获得权限或者已经停用'})
+		}
+	})
+})
+
+// 删除主页推荐
+router.post('/delRecommend',(req,res,next)=>{
+	if(!req.body.recommendId){
+		res.json({status:1,message:'主页推荐id传递失败'})
+	}
+	if(!req.body.username){
+		res.json({status:1,message:'用户名为空'})
+	}
+	if(!req.body.token){
+		res.json({status:1,message:'登录出错'})
+	}
+	if(!req.body.id){
+		res.json({status:1,message:'用户传递错误'})
+	}
+	user.findByUsername(req.body.username,(err,findUser)=>{
+		if(findUser[0].userAdmin && !findUser[0].userStop){
+			recommend.remove({_id:req.body.recommendId},(err,delRecommend)=>{
+				res.json({status:1,message:'删除成功',data:delRecommend})
 			})
 		}else{
 			res.json({error:1,message:'用户没有获得权限或者已经停用'})
