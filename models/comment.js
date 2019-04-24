@@ -14,5 +14,8 @@ comment.statics.findByMovieId = function(m_id, callBack) {
 comment.statics.findAll = function(callBack) {
     this.find({}, callBack)
 }
+comment.statics.findByPagination = function(pageNum,pageSize,callBack){
+    this.find({},callBack).limit(pageSize).skip((pageNum-1)*pageSize)
+}
 var commentModel = mongoose.model('comment', comment);
 module.exports = commentModel;

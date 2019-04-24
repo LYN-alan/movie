@@ -13,6 +13,9 @@ var user = new mongoose.Schema({
 user.statics.findAll=function(callBack){
     this.find({},callBack);
 }
+user.statics.findUserByPagination = function(pageNum,pageSize,callBack){
+    this.find({},callBack).limit(pageSize).skip((pageNum-1)*pageSize)
+}
 //使用用户名查找的方式
 user.statics.findByUsername = function(name,callBack){
     this.find({
