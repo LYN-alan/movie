@@ -290,7 +290,7 @@ router.post('/powerUpdate',(req,res,next)=>{
 	}
 	user.findByUsername(req.body.username,(err,findUser)=>{
 		if(findUser[0].userAdmin && !findUser.userStop){
-			user.update({_id:req.body.userId},{userAdmin:true},(err,updateUser)=>{
+			user.update({_id:req.body.userId},{userAdmin:req.body.userAdmin},(err,updateUser)=>{
 				res.json({status:0,message:'修改成功',data:updateUser})
 			})
 		}else{
