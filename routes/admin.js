@@ -5,6 +5,7 @@ var user = require('../models/user');
 var comment = require('../models/comment');
 var article = require('../models/article');
 var recommend = require('../models/recommend');
+var qiniu= require('qiniu')
 //后台管理需要验证其用户的后台管理权限
 //后台管理admin，添加新的电影
 router.post('/movieAdd', (req, res, next) => {
@@ -417,4 +418,69 @@ router.post('/delRecommend',(req,res,next)=>{
 		}
 	})
 })
+//获取上传图片的token
+router.post('/getUploadToken',(req,res,next)=>{
+	if(!req.body.username){
+		res.json({status:1,message:'用户名为空'})
+	}
+	if(!req.body.token){
+		res.json({status:1,message:'登录出错'})
+	}
+	if(!req.body.id){
+		res.json({status:1,message:'用户传递错误'})
+	}
+	user.findByUsername(req.body.username,(err,findUser)=>{
+		if(findUser[0].userAdmin && !findUser[0].userStop){
+			var upLoadToken = getUploadToken();
+			res.json({status:1,message:'获取成功',token:upLoadToken})
+		}else{
+			res.json({error:1,message:'用户没有获得权限或者已经停用'})
+		}
+	})
+})
+//新增文章
+router.post('/addArticle',(req,res,next)=>{
+	if(!req.body.username){
+		res.json({status:1,message:'用户名为空'})
+	}
+	if(!req.body.token){
+		res.json({status:1,message:'登录出错'})
+	}
+	if(!req.body.id){
+		res.json({status:1,message:'用户传递错误'})
+	}
+	if(!req.body.articleTitle){
+		res.json({status:1,message:'文章名称为空'})
+	}
+	if(!req.body.articleContext){
+		res.json({status:1,message:'文章内容为空'})
+	}
+	user.findByUsername(req.body.username,(err,findUser)=>{
+		if(findUser[0].userAdmin && !findUser[0].userStop){
+			var saveArticle = new article({
+				articleTitle:req.body.articleTitle,
+				articleContext:req.body.articleContext,
+				articleTime:Date.now()
+			})
+			saveArticle.save(err=>{
+				if(err){
+					res.json({status:1,message:err})
+				}
+			})
+		}else{
+			res.json({error:1,message:'用户没有权限或者已经停用'})
+		}
+	})
+})
+function getUploadToken(){
+	var accessKey = 'vRhQ_SSyx_xFEZhCPvOtg4kHOz2jf5b3eBxa5QRN';
+	var secretKey = 'Ue2WQDcjWF-9swtZ4FhkuAe1Qw4pfOs1TRamLvm3';
+	var mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
+	var options = {
+		scope: 'image',
+	  };
+	  var putPolicy = new qiniu.rs.PutPolicy(options);
+	  var uploadToken=putPolicy.uploadToken(mac);
+	  return uploadToken;
+}
 module.exports = router;
